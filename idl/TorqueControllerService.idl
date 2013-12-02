@@ -1,0 +1,32 @@
+/**
+ * @file ImpedanceControllerService.idl
+ * @brief Services for the impedance interface
+ */
+module OpenHRP
+{
+  
+  interface TorqueControllerService
+  {
+    /**
+     * @brief start torque controller in specified joint
+     * @param jname: target joint name
+     * @return true if set successfully, false otherwise
+     */
+    boolean startTorqueControl(in string jname);
+
+    /**
+     * @brief stop torque controller in specified joint
+     * @param jname: target joint name
+     * @return true if set successfully, false otherwise
+     */
+    boolean stopTorqueControl(in string jname);
+
+    /**
+     * @brief set torque reference to torque controller in specified joint
+     * @param jname: target joint name
+     * @return true if set successfully, false otherwise
+     */
+    boolean setReferenceTorque(in string jname, in double tauRef);
+
+  };
+};
