@@ -48,11 +48,13 @@ private:
     double transition_count;
     double dq; //difference of joint angle from base(qRef) from tdc. it is calcurated by dq = integrate(qd * dt), dq*dt is output of tdc 
     double transition_dq; // for transition
+    double recovery_dq; // last difference of joint angle from qRef (dq + transition_dq) when state was changed to STOP
     double getMotorControllerDq(void); // get according dq according to state
   };
   
   // internal functions
   void resetMotorControllerVariables(MotorController& _mc); // reset internal torque control parameter  
+  void preparateStop(MotorController &_mc);
   void updateController(double _tau, double _tauRef, MotorController& _mc); // execute control and update controller member valiables 
 
   std::string m_joint_name; // joint name which is controled

@@ -59,9 +59,11 @@ bool MotorTorqueController::activate(void)
 
 bool MotorTorqueController::deactivate(void)
 {
-  m_normalController.state = STOP;
-  m_normalController.transition_dq = m_normalController.getMotorControllerDq();
-  m_normalController.transition_count = MAX_TRANSITION_COUNT;
+  // m_normalController.state = STOP;
+  // // m_normalController.transition_dq = m_normalController.getMotorControllerDq();
+  // m_normalController.recovery_dq = m_normalController.getMotorControllerDq();
+  // m_normalController.transition_count = MAX_TRANSITION_COUNT;
+  preparateStop(m_normalController);
   return true;
 }
 
@@ -74,40 +76,44 @@ bool MotorTorqueController::setReferenceTorque(double _tauRef)
 double MotorTorqueController::execute (double _tau, double _tauMax)
 {
   // define controller state
-  double dq;
-  
+  double dq, limitedTauRef;
+
   // define emergency state
   if (std::abs(_tau) > std::abs(_tauMax)) {
     if (m_emergencyController.state != ACTIVE) {
-      m_emergencyController.controller.reset();
       // save transtion of current controller 
       if (m_emergencyController.state != INACTIVE) {
-        m_emergencyController.transition_dq = m_emergencyController.getMotorControllerDq(); 
+        m_emergencyController.transition_dq = m_emergencyController.getMotorControllerDq();
       } else if (m_normalController.state != INACTIVE) {
         m_emergencyController.transition_dq = m_normalController.getMotorControllerDq();
       }
+      m_emergencyController.dq = 0;
+      m_emergencyController.controller.reset();
       m_emergencyController.state = ACTIVE;
     }
   } else {
     if (m_emergencyController.state == ACTIVE &&
         std::abs(_tau) <= std::max(std::abs(_tauMax) - TORQUE_MARGIN, 0.0)) {
       if (m_normalController.state != INACTIVE) { // take control over normal process
+        m_normalController.transition_dq = m_emergencyController.getMotorControllerDq();
         m_emergencyController.state = INACTIVE;
       } else { // activate stop process for emergency
-        m_emergencyController.transition_count = MAX_TRANSITION_COUNT;
-        m_emergencyController.transition_dq = m_emergencyController.getMotorControllerDq();
-        m_emergencyController.state = STOP;
+        // m_emergencyController.transition_dq = m_emergencyController.getMotorControllerDq();
+        // m_emergencyController.recovery_dq = m_emergencyController.getMotorControllerDq();
+        // m_emergencyController.transition_count = MAX_TRANSITION_COUNT;
+        // m_emergencyController.state = STOP;
+        preparateStop(m_emergencyController);
       }
     }
   }
 
   // execute torque control and renew state
-  m_actual_tauRef = std::min(std::max(-_tauMax, m_command_tauRef), _tauMax);
-  updateController(_tau, m_actual_tauRef, m_normalController);
+  limitedTauRef = std::min(std::max(-_tauMax, m_command_tauRef), _tauMax);
+  updateController(_tau, limitedTauRef, m_normalController);
   dq = m_normalController.getMotorControllerDq();
   if (m_emergencyController.state != INACTIVE) { // overwrite by tauMax control when emergency mode
-    m_actual_tauRef = copysign(_tauMax, _tau);
-    updateController(_tau, m_actual_tauRef, m_emergencyController);
+    limitedTauRef = copysign(_tauMax, _tau);
+    updateController(_tau, limitedTauRef, m_emergencyController);
     dq = m_emergencyController.getMotorControllerDq();
     // dq = m_emergencyController.dq;
     // if (m_emergencyController.dq > 0) { // precede emergencyController.dq
@@ -121,6 +127,7 @@ double MotorTorqueController::execute (double _tau, double _tauMax)
     //   dq = std::min(m_normalController.dq, m_emergencyController.dq);
     // }
   }
+  m_actual_tauRef = limitedTauRef;
   
   return dq;
 }
@@ -148,9 +155,9 @@ void MotorTorqueController::printMotorControllerVariables(void)
   std::cerr << prefix << "normalController.transition_dq:" << m_normalController.transition_dq << std::endl;
   std::cerr << prefix << "emergencyController.state:" << m_emergencyController.state  << std::endl;
   std::cerr << prefix << "emergencyController.dq:" << m_emergencyController.dq  << std::endl;
-  std::cerr << prefix << "energencyController.transition_dq:" << m_emergencyController.transition_dq << std::endl;
+  std::cerr << prefix << "emergencyController.transition_dq:" << m_emergencyController.transition_dq << std::endl;
   std::cerr << prefix << "command_tauRef:" << m_command_tauRef  << std::endl;
-  std::cerr << prefix << "actual_tauRef:" << m_command_tauRef  << std::endl;
+  std::cerr << prefix << "actual_tauRef:" << m_actual_tauRef  << std::endl;
   std::cerr << std::endl;
 }
 
@@ -160,15 +167,25 @@ void MotorTorqueController::resetMotorControllerVariables(MotorTorqueController:
   _mc.transition_count = 0;
   _mc.dq = 0;
   _mc.transition_dq = 0;
+  _mc.recovery_dq = 0;
+}
+
+void MotorTorqueController::preparateStop(MotorTorqueController::MotorController &_mc)
+{
+  _mc.recovery_dq = _mc.getMotorControllerDq(); 
+  _mc.transition_count = MAX_TRANSITION_COUNT;
+  _mc.dq = 0; // dq must be reseted after recovery_dq setting(used in getMootroControllerDq)
+  _mc.state = STOP;
+  return;
 }
 
 void MotorTorqueController::updateController(double _tau, double _tauRef, MotorTorqueController::MotorController& _mc)
 {
   switch (_mc.state) {
   case ACTIVE:
-    if (_mc.dq == 0) {
-      _mc.dq += _mc.transition_dq; // if contorller interrupt its transition, base joint angle is not qRef, qRef + transition_dq      
-    }
+    // if (_mc.dq == 0) {
+    //   _mc.dq = _mc.transition_dq; // if contorller interrupt its transition, base joint angle is not qRef, qRef + transition_dq      
+    // }
     _mc.dq += _mc.controller.update(_tau, _tauRef);
     // _mc.dq = _mc.controller.update(_tau, _tauRef);
     // _mc.dq += _mc.transition_dq;
@@ -180,7 +197,8 @@ void MotorTorqueController::updateController(double _tau, double _tauRef, MotorT
         _mc.state = INACTIVE;
         break;
       }
-    _mc.transition_dq = (_mc.dq / MAX_TRANSITION_COUNT) * _mc.transition_count;
+    // _mc.transition_dq = (_mc.dq / MAX_TRANSITION_COUNT) * _mc.transition_count;
+    _mc.transition_dq = (_mc.recovery_dq / MAX_TRANSITION_COUNT) * _mc.transition_count;
     _mc.transition_count--;
     break;
   default:
@@ -197,14 +215,15 @@ double MotorTorqueController::MotorController::getMotorControllerDq(void)
   double ret_dq;
   switch(state) {
   case ACTIVE:
-    // ret_dq = _mc.dq + _mc.transition_dq;
-    ret_dq = dq;
+    ret_dq = dq + transition_dq; // if contorller interrupt its transition, base joint angle is not qRef, qRef + transition_dq
+    // ret_dq = dq;
     break;
   case STOP:
     ret_dq = transition_dq;
     break;
   default:
     ret_dq = dq;
+    break;
   }
   return ret_dq;
 }

@@ -6,7 +6,7 @@
 #define ABS(x) (((x) < 0) ? (-(x)) : (x))
 
 int main (int argc, char* argv[]) {
-  double ke = 400, tc = 0.04, dt = 0.005;
+  double ke = 100, tc = 1.0, dt = 0.005;
   MotorTorqueController controller("hoge", ke, tc, dt);
   double q = 0, dq = 0, q_ref = 0, tau = 0, tau_d = 10.0, limit = 90.0;
   double qgain = 0.000001;
