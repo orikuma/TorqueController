@@ -299,9 +299,6 @@ void TorqueController::executeTorqueControl(hrp::dvector &dq)
     Guard guard(m_mutex);
     for (int i = 0; i < numJoints; i++) {
       dq[i] = m_motorTorqueControllers[i].execute(m_tauCurrentIn.data[i], tauMax[i]); // twoDofController: tau = -K(q - qRef)
-      if (i == 28 && DEBUGP) {
-        m_motorTorqueControllers[i].printMotorControllerVariables();
-      }
     }
     
     if (DEBUGP) {
@@ -323,7 +320,6 @@ void TorqueController::executeTorqueControl(hrp::dvector &dq)
 bool TorqueController::startTorqueControl(std::string jname)
 {
   bool succeed = false;
-  std::cerr << "search " << jname << std::endl;
   for (std::vector<MotorTorqueController>::iterator it = m_motorTorqueControllers.begin(); it != m_motorTorqueControllers.end(); ++it) {
     if ((*it).getJointName() == jname){
       std::cerr << "Start torque control in " << jname << std::endl;
@@ -348,7 +344,6 @@ bool TorqueController::startMultipleTorqueControls(const OpenHRP::TorqueControll
 bool TorqueController::stopTorqueControl(std::string jname)
 {
   bool succeed = false;
-  std::cerr << "search " << jname << std::endl;
   for (std::vector<MotorTorqueController>::iterator it = m_motorTorqueControllers.begin(); it != m_motorTorqueControllers.end(); ++it) {
     if ((*it).getJointName() == jname){
       std::cerr << "Stop torque control in " << jname << std::endl;
@@ -378,10 +373,9 @@ bool TorqueController::setReferenceTorque(std::string jname, double tauRef)
   Guard guard(m_mutex);
 
   // Search target joint
-  std::cerr << "search " << jname << std::endl;
   for (std::vector<MotorTorqueController>::iterator it = m_motorTorqueControllers.begin(); it != m_motorTorqueControllers.end(); ++it) {
     if ((*it).getJointName() == jname){
-      std::cerr << "set " << jname << " reference torque " << tauRef << std::endl;
+      std::cerr << "Set " << jname << " reference torque to " << tauRef << std::endl;
       succeed = (*it).setReferenceTorque(tauRef);
     }
   }
