@@ -103,9 +103,12 @@ public:
 // virtual RTC::ReturnCode_t onRateChanged(RTC::UniqueId ec_id);
 
   bool startTorqueControl(std::string jname);
+  bool startMultipleTorqueControls(const OpenHRP::TorqueControllerService::StrSequence& jnames);
   bool stopTorqueControl(std::string jname);
+  bool stopMultipleTorqueControls(const OpenHRP::TorqueControllerService::StrSequence& jnames);
   bool setReferenceTorque(std::string jname, double tauRef);
-  
+  bool setMultipleReferenceTorques(const OpenHRP::TorqueControllerService::StrSequence& jnames, const OpenHRP::TorqueControllerService::dSequence& tauRefs);
+
 protected:
 // Configuration variable declaration
 // <rtc-template block="config_declare">

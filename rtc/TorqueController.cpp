@@ -41,7 +41,6 @@ static const char* torquecontroller_spec[] =
 #define DQ_MAX 1.0
 
 typedef coil::Guard<coil::Mutex> Guard;
-static double vlimit(double value, double llimit, double ulimit);
 
 TorqueController::TorqueController(RTC::Manager* manager)
   : RTC::DataFlowComponentBase(manager),
@@ -136,10 +135,8 @@ RTC::ReturnCode_t TorqueController::onInitialize()
       }
     }
   }
-
   // allocate memory for outPorts
   m_qRefOut.data.length(m_robot->numJoints());
- 
   return RTC::RTC_OK;
 }
 
@@ -305,7 +302,6 @@ void TorqueController::executeTorqueControl(hrp::dvector &dq)
       if (i == 28 && DEBUGP) {
         m_motorTorqueControllers[i].printMotorControllerVariables();
       }
-      // dq[i] = vlimit(dq[i], -DQ_MAX, DQ_MAX); // dq limitation
     }
     
     if (DEBUGP) {
@@ -337,6 +333,18 @@ bool TorqueController::startTorqueControl(std::string jname)
   return succeed;
 }
 
+bool TorqueController::startMultipleTorqueControls(const OpenHRP::TorqueControllerService::StrSequence& jnames)
+{
+  bool succeed = true;
+  bool retval;
+  for (int i = 0; i < jnames.length(); i++) {
+    retval = startTorqueControl(std::string(jnames[i]));
+    if (!retval) { // return false when once failed
+      succeed = false;
+    }
+  }
+}
+
 bool TorqueController::stopTorqueControl(std::string jname)
 {
   bool succeed = false;
@@ -348,6 +356,18 @@ bool TorqueController::stopTorqueControl(std::string jname)
     }
   }
   return succeed;
+}
+
+bool TorqueController::stopMultipleTorqueControls(const OpenHRP::TorqueControllerService::StrSequence& jnames)
+{
+  bool succeed = true;
+  bool retval;
+  for (int i = 0; i < jnames.length(); i++) {
+    retval = stopTorqueControl(std::string(jnames[i]));
+    if (!retval) { // return false when once failed
+      succeed = false;
+    }
+  }
 }
 
 bool TorqueController::setReferenceTorque(std::string jname, double tauRef)
@@ -368,17 +388,24 @@ bool TorqueController::setReferenceTorque(std::string jname, double tauRef)
   return succeed;
 }
 
-
-static double vlimit(double value, double llimit, double ulimit)
+bool TorqueController::setMultipleReferenceTorques(const OpenHRP::TorqueControllerService::StrSequence& jnames, const OpenHRP::TorqueControllerService::dSequence& tauRefs)
 {
-  if (value > ulimit) {
-    return ulimit;
-  } else if (value < llimit) {
-    return llimit;
+  bool succeed = true;
+  bool retval;
+  // check accordance of joint name and tauRefs
+  if (jnames.length() != tauRefs.length()) {
+    std::cerr << "[ERROR] Length of jnames and tauRefs are different." << std::endl;
+    return false;
   }
-  return value;
+  // set reference torques
+  for (int i = 0; i < jnames.length(); i++) {
+    retval = setReferenceTorque(std::string(jnames[i]), tauRefs[i]);
+    if (!retval) { // return false when once failed
+      succeed = false;
+    }
+  }
+  return succeed;
 }
-
 
 extern "C"
 {
