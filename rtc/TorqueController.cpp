@@ -118,23 +118,31 @@ RTC::ReturnCode_t TorqueController::onInitialize()
   }
   // make torque controller settings
   coil::vstring motorTorqueControllerParamsFromConf = coil::split(prop["torque_controller_params"], ",");
+ 
+  hrp::dvector tdcParamK(m_robot->numJoints()), tdcParamT(m_robot->numJoints());
   if (motorTorqueControllerParamsFromConf.size() == 2 * m_robot->numJoints()) {
-    double tdcParamK, tdcParamT;
-    if (motorTorqueControllerParamsFromConf.size() == 2 * m_robot->numJoints()) {
-      for (int i = 0; i < m_robot->numJoints(); i++) {
-        coil::stringTo(tdcParamK, motorTorqueControllerParamsFromConf[2 * i].c_str());
-        coil::stringTo(tdcParamT, motorTorqueControllerParamsFromConf[2 * i + 1].c_str());
-        m_motorTorqueControllers.push_back(MotorTorqueController(m_robot->joint(i)->name, tdcParamK, tdcParamT, m_dt));
-      }
-    } else { // default
-      std::cerr << "[WARNING] torque_controller_params is not correct number, " << motorTorqueControllerParamsFromConf.size() << std::endl;
-      for (int i = 0; i < m_robot->numJoints(); i++) {
-        tdcParamK = 400.0;
-        tdcParamT = 0.04;
-        m_motorTorqueControllers.push_back(MotorTorqueController(m_robot->joint(i)->name, tdcParamK, tdcParamT, m_dt));
-      }
+    for (int i = 0; i < m_robot->numJoints(); i++) {
+      coil::stringTo(tdcParamK[i], motorTorqueControllerParamsFromConf[2 * i].c_str());
+      coil::stringTo(tdcParamT[i], motorTorqueControllerParamsFromConf[2 * i + 1].c_str());
+      m_motorTorqueControllers.push_back(MotorTorqueController(m_robot->joint(i)->name, tdcParamK[i], tdcParamT[i], m_dt));
+    }
+  } else { // default
+    std::cerr << "[WARNING] torque_controller_params is not correct number, " << motorTorqueControllerParamsFromConf.size() << std::endl;
+    for (int i = 0; i < m_robot->numJoints(); i++) {
+      tdcParamK[i] = 400.0;
+      tdcParamT[i] = 0.04;
+      m_motorTorqueControllers.push_back(MotorTorqueController(m_robot->joint(i)->name, tdcParamK[i], tdcParamT[i], m_dt));
     }
   }
+
+  if (m_debugLevel > 0) {
+    std::cerr << "torque controller parames:" << std::endl;
+    for (int i = 0; i < m_robot->numJoints(); i++) {
+      std::cerr << m_robot->joint(i)->name << ":" << tdcParamK[i] << " " << tdcParamT[i] << " " << m_dt << std::endl;
+    }
+  }
+
+
   // allocate memory for outPorts
   m_qRefOut.data.length(m_robot->numJoints());
   return RTC::RTC_OK;
@@ -212,7 +220,7 @@ RTC::ReturnCode_t TorqueController::onExecute(RTC::UniqueId ec_id)
 
     // output restricted qRef
     for (int i = 0; i < m_robot->numJoints(); i++) {
-      m_qRefOut.data[i] = std::min(std::max(m_qRefIn.data[i] - dq[i], m_robot->joint(i)->llimit), m_robot->joint(i)->ulimit);
+      m_qRefOut.data[i] = std::min(std::max(m_qRefIn.data[i] - dq[i], m_robot->joint(i)->llimit), m_robot->joint(i)->ulimit);      
     }
     m_qRefOut.tm = tm;
     m_qRefOutOut.write();
@@ -299,6 +307,11 @@ void TorqueController::executeTorqueControl(hrp::dvector &dq)
     Guard guard(m_mutex);
     for (int i = 0; i < numJoints; i++) {
       dq[i] = m_motorTorqueControllers[i].execute(m_tauCurrentIn.data[i], tauMax[i]); // twoDofController: tau = -K(q - qRef)
+      // output debug message
+      if (DEBUGP && m_motorTorqueControllers[i].getMotorControllerState() != MotorTorqueController::INACTIVE) {
+        m_motorTorqueControllers[i].printMotorControllerVariables();
+      }
+
     }
     
     if (DEBUGP) {

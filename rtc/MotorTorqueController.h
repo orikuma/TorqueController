@@ -60,8 +60,9 @@ private:
   std::string m_joint_name; // joint name which is controled
   int m_transition_count; // positive value when stopping
   double m_dt; // control term
+  double m_current_tau; // current tau (mainly for debug message)
   double m_command_tauRef; // reference tau
-  double m_actual_tauRef; // reference tau which is limited or overwritten by emergency
+  double m_actual_tauRef; // reference tau which is limited or overwritten by emergency (mainly for debug message)
   MotorController m_normalController; // substance of two dof controller
   MotorController m_emergencyController; // overwrite normal controller when emergency
 };

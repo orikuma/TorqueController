@@ -73,7 +73,7 @@ double MotorTorqueController::execute (double _tau, double _tauMax)
 {
   // define controller state
   double dq, limitedTauRef;
-
+ 
   // define emergency state
   if (std::abs(_tau) > std::abs(_tauMax)) {
     if (m_emergencyController.state != ACTIVE) {
@@ -108,6 +108,9 @@ double MotorTorqueController::execute (double _tau, double _tauMax)
     updateController(_tau, limitedTauRef, m_emergencyController);
     dq = m_emergencyController.getMotorControllerDq();
   }
+
+  // for debug
+  m_current_tau = _tau;
   m_actual_tauRef = limitedTauRef;
   
   return dq;
@@ -132,11 +135,10 @@ void MotorTorqueController::printMotorControllerVariables(void)
   std::string prefix = "[MotorTorqueController]";
   prefix += m_joint_name + ".";
   std::cerr << prefix << "normalController.state:" << m_normalController.state  << std::endl;
-  std::cerr << prefix << "normalController.dq:" << m_normalController.dq  << std::endl;
-  std::cerr << prefix << "normalController.transition_dq:" << m_normalController.transition_dq << std::endl;
+  std::cerr << prefix << "normalController.dq:" << m_normalController.getMotorControllerDq()  << std::endl;
   std::cerr << prefix << "emergencyController.state:" << m_emergencyController.state  << std::endl;
-  std::cerr << prefix << "emergencyController.dq:" << m_emergencyController.dq  << std::endl;
-  std::cerr << prefix << "emergencyController.transition_dq:" << m_emergencyController.transition_dq << std::endl;
+  std::cerr << prefix << "emergencyController.dq:" << m_emergencyController.getMotorControllerDq() << std::endl;
+  std::cerr << prefix << "tau:" << m_current_tau  << std::endl;
   std::cerr << prefix << "command_tauRef:" << m_command_tauRef  << std::endl;
   std::cerr << prefix << "actual_tauRef:" << m_actual_tauRef  << std::endl;
   std::cerr << std::endl;
