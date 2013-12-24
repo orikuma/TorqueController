@@ -16,6 +16,7 @@
 #include <rtm/DataInPort.h>
 #include <rtm/DataOutPort.h>
 #include <rtm/idl/BasicDataTypeSkel.h>
+#include <rtm/config_rtc.h>
 
 #include <hrpModel/Body.h>
 #include <hrpModel/Link.h>
@@ -27,6 +28,7 @@
 // <rtc-template block="service_impl_h">
 
 #include "TorqueControllerService_impl.h"
+#include "SequencePlayerService.hh"
 
 // </rtc-template>
 
@@ -106,6 +108,8 @@ public:
   bool startMultipleTorqueControls(const OpenHRP::TorqueControllerService::StrSequence& jnames);
   bool stopTorqueControl(std::string jname);
   bool stopMultipleTorqueControls(const OpenHRP::TorqueControllerService::StrSequence& jnames);
+  bool stopTorqueControlForcely(std::string jname);
+  bool stopMultipleTorqueControlsForcely(const OpenHRP::TorqueControllerService::StrSequence& jnames);
   bool setReferenceTorque(std::string jname, double tauRef);
   bool setMultipleReferenceTorques(const OpenHRP::TorqueControllerService::StrSequence& jnames, const OpenHRP::TorqueControllerService::dSequence& tauRefs);
 
@@ -144,12 +148,14 @@ protected:
 // Service declaration
 // <rtc-template block="service_declare">
   RTC::CorbaPort m_TorqueControllerServicePort;
+  RTC::CorbaPort m_SequencePlayerServicePort;
   
 // </rtc-template>
 
 // Consumer declaration
 // <rtc-template block="consumer_declare">
   TorqueControllerService_impl m_service0;
+  RTC::CorbaConsumer<OpenHRP::SequencePlayerService> m_sequencePlayerService0;
   
 // </rtc-template>
   

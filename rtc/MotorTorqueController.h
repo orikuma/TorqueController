@@ -29,6 +29,7 @@ public:
   void setupController(double _ke, double _tc, double _dt);
   bool activate(void); // set state of torque controller to ACTIVE
   bool deactivate(void); // set state of torque controller to STOP -> INACTIVE
+  bool deactivateForcely(void); // set state of torque controller to INACTIVE forcely (Skip STOP and reset valiables)
   bool setReferenceTorque(double _tauRef); // set reference torque (does not activate controller)
   double execute(double _tau, double _tauMax); // determine final state and tauRef, then throw tau, tauRef and state to executeControl
   
@@ -54,7 +55,7 @@ private:
   
   // internal functions
   void resetMotorControllerVariables(MotorController& _mc); // reset internal torque control parameter  
-  void preparateStop(MotorController &_mc);
+  void prepareStop(MotorController &_mc);
   void updateController(double _tau, double _tauRef, MotorController& _mc); // execute control and update controller member valiables 
 
   std::string m_joint_name; // joint name which is controled

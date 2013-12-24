@@ -37,6 +37,20 @@ module OpenHRP
      * @return true if set successfully, false otherwise
      */
     boolean stopMultipleTorqueControls(in StrSequence jnames);
+
+    /**
+     * @brief inactivate torque controller forcely in specified joint
+     * @param jname: target joint name
+     * @return true if set successfully, false otherwise
+     */
+    boolean stopTorqueControlForcely(in string jname);
+
+    /**
+     * @brief inactivate torque controller forcely in specified joints
+     * @param jnames: target joint names
+     * @return true if set successfully, false otherwise
+     */
+    boolean stopMultipleTorqueControlsForcely(in StrSequence jnames);
     
     /**
      * @brief set torque reference to torque controller in specified joint

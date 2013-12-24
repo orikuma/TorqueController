@@ -29,9 +29,7 @@ static const char* torquecontroller_spec[] =
   "language",          "C++",
   "lang_type",         "compile",
   // Configuration variables
-  "conf.default.string", "test",
-  "conf.default.intvec", "1,2,3",
-  "conf.default.double", "1.234",
+  "debugLevel",        "1",
 
   ""
 };
@@ -51,6 +49,7 @@ TorqueController::TorqueController(RTC::Manager* manager)
     m_qCurrentInIn("qCurrent", m_qCurrentIn),
     m_qRefOutOut("q", m_qRefOut),
     m_TorqueControllerServicePort("TorqueControllerService"),
+    m_SequencePlayerServicePort("SequencePlayerService"),
 	m_debugLevel(1)
 {
   m_service0.torque_controller(this);
@@ -86,11 +85,13 @@ RTC::ReturnCode_t TorqueController::onInitialize()
   
   // Set service provider to Ports
   m_TorqueControllerServicePort.registerProvider("service0", "TorqueControllerService", m_service0);
+  m_SequencePlayerServicePort.registerConsumer("service0", "SequencePlayerService", m_sequencePlayerService0);
   
   // Set service consumers to Ports
   
   // Set CORBA Service Ports
   addPort(m_TorqueControllerServicePort);
+  addPort(m_SequencePlayerServicePort);
   
   // </rtc-template>
 
@@ -191,7 +192,7 @@ RTC::ReturnCode_t TorqueController::onExecute(RTC::UniqueId ec_id)
   RTC::Time tm;
   tm.sec = coiltm.sec();
   tm.nsec = coiltm.usec()*1000;
-  
+
   // update port
   if (m_tauCurrentInIn.isNew()) {
     m_tauCurrentInIn.read();
@@ -302,6 +303,11 @@ void TorqueController::executeTorqueControl(hrp::dvector &dq)
         std::cerr << " " << tauMax[i];
       }
       std::cerr << std::endl;
+      std::cerr << "qCurrentIn: ";
+      for (int i = 0; i < numJoints; i++) {
+        std::cerr << " " << m_qCurrentIn.data[i];
+      }
+      std::cerr << std::endl;
     }
 
     Guard guard(m_mutex);
@@ -352,6 +358,7 @@ bool TorqueController::startMultipleTorqueControls(const OpenHRP::TorqueControll
       succeed = false;
     }
   }
+  return succeed;
 }
 
 bool TorqueController::stopTorqueControl(std::string jname)
@@ -376,6 +383,42 @@ bool TorqueController::stopMultipleTorqueControls(const OpenHRP::TorqueControlle
       succeed = false;
     }
   }
+  return succeed;
+}
+
+bool TorqueController::stopTorqueControlForcely(std::string jname)
+{
+  bool succeed = false;
+  for (std::vector<MotorTorqueController>::iterator it = m_motorTorqueControllers.begin(); it != m_motorTorqueControllers.end(); ++it) {
+    if ((*it).getJointName() == jname){
+      for (int i = 0; i < m_robot->numJoints(); i++) {
+        if (m_robot->joint(i)->name == jname) {
+          std::cerr << "Stop torque control forcely in " << jname << std::endl;
+          try {
+            m_sequencePlayerService0->setJointAngle(jname.c_str(), m_qCurrentIn.data[i], 1.0); // set target joint angle to current angle
+          } catch (...) {
+            std::cerr << "Failed to setJointAngle." << jname << std::endl;
+            return false;
+          }
+          succeed = (*it).deactivateForcely();
+        }
+      }
+    }
+  }
+  return succeed;
+}
+
+bool TorqueController::stopMultipleTorqueControlsForcely(const OpenHRP::TorqueControllerService::StrSequence& jnames)
+{
+  bool succeed = true;
+  bool retval;
+  for (int i = 0; i < jnames.length(); i++) {
+    retval = stopTorqueControlForcely(std::string(jnames[i]));
+    if (!retval) { // return false when once failed
+      succeed = false;
+    }
+  }
+  return succeed;
 }
 
 bool TorqueController::setReferenceTorque(std::string jname, double tauRef)
@@ -387,7 +430,7 @@ bool TorqueController::setReferenceTorque(std::string jname, double tauRef)
 
   // Search target joint
   for (std::vector<MotorTorqueController>::iterator it = m_motorTorqueControllers.begin(); it != m_motorTorqueControllers.end(); ++it) {
-    if ((*it).getJointName() == jname){
+    if ((*it).getJointName() == jname) {
       std::cerr << "Set " << jname << " reference torque to " << tauRef << std::endl;
       succeed = (*it).setReferenceTorque(tauRef);
     }

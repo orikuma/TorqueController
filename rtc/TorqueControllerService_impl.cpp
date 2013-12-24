@@ -31,6 +31,16 @@ CORBA::Boolean TorqueControllerService_impl::stopMultipleTorqueControls(const Op
 	return m_torque_controller->stopMultipleTorqueControls(jnames);
 }
 
+CORBA::Boolean TorqueControllerService_impl::stopTorqueControlForcely(const char *jointName)
+{
+	return m_torque_controller->stopTorqueControlForcely(std::string(jointName));
+}
+
+CORBA::Boolean TorqueControllerService_impl::stopMultipleTorqueControlsForcely(const OpenHRP::TorqueControllerService::StrSequence& jnames)
+{
+	return m_torque_controller->stopMultipleTorqueControlsForcely(jnames);
+}
+
 CORBA::Boolean TorqueControllerService_impl::setReferenceTorque(const char *jointName, double tauRef)
 {
 	return m_torque_controller->setReferenceTorque(std::string(jointName), tauRef);
