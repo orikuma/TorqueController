@@ -59,7 +59,7 @@ bool MotorTorqueController::activate(void)
 
 bool MotorTorqueController::deactivate(void)
 {
-  preparateStop(m_normalController);
+  prepareStop(m_normalController);
   return true;
 }
 
@@ -94,7 +94,7 @@ double MotorTorqueController::execute (double _tau, double _tauMax)
         m_normalController.transition_dq = m_emergencyController.getMotorControllerDq();
         m_emergencyController.state = INACTIVE;
       } else { // activate stop process for emergency
-        preparateStop(m_emergencyController);
+        prepareStop(m_emergencyController);
       }
     }
   }
@@ -153,7 +153,7 @@ void MotorTorqueController::resetMotorControllerVariables(MotorTorqueController:
   _mc.recovery_dq = 0;
 }
 
-void MotorTorqueController::preparateStop(MotorTorqueController::MotorController &_mc)
+void MotorTorqueController::prepareStop(MotorTorqueController::MotorController &_mc)
 {
   _mc.recovery_dq = _mc.getMotorControllerDq(); 
   _mc.transition_count = MAX_TRANSITION_COUNT;

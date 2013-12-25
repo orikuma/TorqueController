@@ -54,7 +54,7 @@ private:
   
   // internal functions
   void resetMotorControllerVariables(MotorController& _mc); // reset internal torque control parameter  
-  void preparateStop(MotorController &_mc);
+  void prepareStop(MotorController &_mc);
   void updateController(double _tau, double _tauRef, MotorController& _mc); // execute control and update controller member valiables 
 
   std::string m_joint_name; // joint name which is controled
